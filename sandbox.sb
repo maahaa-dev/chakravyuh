@@ -1,0 +1,19 @@
+(version 1)
+(allow default)
+
+;; Confine WRITES to an allowlist (deny everything, then allow specific roots).
+(deny file-write*)
+(allow file-write* (subpath (param "WORKTREE")))
+(allow file-write* (subpath (param "PI_DIR")))
+(allow file-write* (subpath (param "TMP")))
+(allow file-write* (subpath (param "GIT_COMMON_DIR")))
+(allow file-write* (subpath (param "HOME_CACHE")))
+(allow file-write-data
+  (literal "/dev/null") (literal "/dev/zero")
+  (literal "/dev/dtracehelper") (literal "/dev/tty") (literal "/dev/urandom"))
+
+;; Defense-in-depth: deny reads of credential dirs.
+(deny file-read* (subpath (param "SSH_DIR")))
+(deny file-read* (subpath (param "AWS_DIR")))
+
+;; reads (except above), network, process-exec: left at (allow default)

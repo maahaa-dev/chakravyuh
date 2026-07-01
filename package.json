@@ -1,0 +1,31 @@
+{
+  "name": "@maahaa-dev/chakravyuh",
+  "version": "0.1.0",
+  "description": "Entry is easy; the centre is earned. Chakravyuh is loop engineering for AI coding agents — an owned maker→checker→reviewer loop that drives an agent through concentric rings of verification (your tests, a checker, an independent reviewer) until a change breaks through review-ready onto a branch. From maahaa.dev.",
+  "type": "module",
+  "private": true,
+  "license": "Apache-2.0",
+  "author": "Sushil Singh <sushilsingh2005@gmail.com> (https://maahaa.dev)",
+  "homepage": "https://github.com/maahaa-dev/chakravyuh#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/maahaa-dev/chakravyuh.git" },
+  "bugs": { "url": "https://github.com/maahaa-dev/chakravyuh/issues" },
+  "keywords": ["ai", "coding-agent", "agent-loop", "loop-engineering", "code-review", "harness", "llm", "autonomous"],
+  "bin": { "chakravyuh": "dist/cli.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "chakravyuh": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "11.10.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.11",
+    "@types/node": "22.10.2",
+    "tsx": "4.19.2",
+    "typescript": "5.7.2",
+    "vitest": "2.1.8"
+  }
+}

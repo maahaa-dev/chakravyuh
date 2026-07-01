@@ -1,0 +1,21 @@
+{
+  "project": {
+    "id": "lru",
+    "root": "/ABS/PATH/TO/lru-target",
+    "worktreeBase": "/ABS/PATH/TO/lru-target/../.wt",
+    "baseBranch": "main",
+    "healthCmd": "bash health.sh",
+    "sandbox": true,
+    "maxParallel": 1
+  },
+  "roles": {
+    "maker":    { "provider": "openrouter", "model": "deepseek/deepseek-v4-pro",   "thinking": "medium" },
+    "checker":  { "provider": "openrouter", "model": "deepseek/deepseek-v4-flash", "thinking": "low" },
+    "reviewer": { "provider": "openrouter", "model": "z-ai/glm-5.2",               "thinking": "low" }
+  },
+  "backlogPath": "/ABS/PATH/TO/loops/lru/backlog.md",
+  "dbPath": "/ABS/PATH/TO/loops/lru/chakravyuh.db",
+  "currentMdPath": "/ABS/PATH/TO/loops/lru/current.md",
+  "logDir": "/ABS/PATH/TO/loops/lru/logs",
+  "piBinPath": "/ABS/PATH/TO/pi/packages/coding-agent/dist/cli.js"
+}
