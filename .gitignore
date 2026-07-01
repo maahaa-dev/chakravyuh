@@ -3,3 +3,9 @@ node_modules/
 dist/
 *.log
 .DS_Store
+
+# Local-only self-hosting: the anthropic-subscription Pi extension carries the
+# Claude OAuth billing fix — never publish it. Self-host configs hold local
+# absolute paths + role routing. Both stay out of the public repo.
+/extensions/
+*.local.json
