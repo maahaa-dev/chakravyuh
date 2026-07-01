@@ -121,12 +121,22 @@ export async function runUnit(project: Project, unit: WorkUnit, deps: LoopDeps):
   const overCap = (): boolean => cap !== undefined && tokensSpent > cap;
 
   try {
-    let failureContext = "";
+    // Append-only ledger of per-attempt failure context.
+    // Attempt N's maker prompt shows labelled blockers from attempts 1..N-1 (most-recent last).
+    // Built immutably each iteration — prior entries are never mutated, only spread into a new array.
+    // Stays naturally small because attempts are capped by maxAttemptsPerUnit.
+    let failureLedger: ReadonlyArray<{ readonly attempt: number; readonly context: string }> = [];
 
     while (current.attempt < deps.budget.maxAttemptsPerUnit) {
       if (deps.stopRequested()) return fail("blocked");
       if (overCap()) return fail("failed"); // don't start a new attempt over budget
       setStatus("building", current.attempt + 1);
+
+      // Derive the cumulative feedback string immutably from the ledger.
+      // Each entry is labelled with its attempt number so the maker can see the full history.
+      const failureContext = failureLedger.length === 0
+        ? ""
+        : failureLedger.map(e => `### Attempt ${e.attempt} blockers\n${e.context}`).join("\n\n");
 
       // MAKER
       const makerStart = new Date().toISOString();
@@ -140,7 +150,10 @@ export async function runUnit(project: Project, unit: WorkUnit, deps: LoopDeps):
       // spends tokens, and the between-checker-reviewer cap check is intentionally dropped: both
       // verifiers now spawn together, and either may overshoot the cap by one run).
       if (overCap()) return fail("failed"); // don't spawn the checker+reviewer pair over budget
-      if (makerRes.stopReason !== "stop") { failureContext = "Maker did not complete; retry."; continue; }
+      if (makerRes.stopReason !== "stop") {
+        failureLedger = [...failureLedger, { attempt: current.attempt, context: "Maker did not complete; retry." }];
+        continue;
+      }
       if (deps.stopRequested()) return fail("blocked");
 
       // GATE (authoritative). Bound by the same hard timeout as a spawn — a hung health command
@@ -149,7 +162,10 @@ export async function runUnit(project: Project, unit: WorkUnit, deps: LoopDeps):
       // health check itself fails) but its output still drives the retry feedback.
       setStatus("checking");
       const gateAfter = deps.runHealth(project.healthCmd, worktree, deps.budget.hardTimeoutMs);
-      if (gateAfter.exitCode !== 0) { failureContext = renderBlockers([], gateAfter); continue; }
+      if (gateAfter.exitCode !== 0) {
+        failureLedger = [...failureLedger, { attempt: current.attempt, context: renderBlockers([], gateAfter) }];
+        continue;
+      }
       if (deps.stopRequested()) return fail("blocked");
 
       // CHECKER (Spec axis) + REVIEWER (Standards axis): independent, read-only, data-independent
@@ -177,10 +193,13 @@ export async function runUnit(project: Project, unit: WorkUnit, deps: LoopDeps):
       addTokens(checkRes);
       addTokens(reviewRes); // accounted, but this is the last spawn pair — do not fail-after.
       if (!cVerdict.pass || !rVerdict.pass) {
-        failureContext = renderBlockers([
-          { axis: "Spec", verdict: cVerdict },
-          { axis: "Standards", verdict: rVerdict },
-        ]);
+        failureLedger = [...failureLedger, {
+          attempt: current.attempt,
+          context: renderBlockers([
+            { axis: "Spec", verdict: cVerdict },
+            { axis: "Standards", verdict: rVerdict },
+          ]),
+        }];
         continue;
       }
 
@@ -188,7 +207,10 @@ export async function runUnit(project: Project, unit: WorkUnit, deps: LoopDeps):
       // empty `git commit` would throw and crash the run, so treat a clean worktree as an
       // incomplete attempt and retry rather than committing nothing.
       if (deps.rootIsClean(worktree)) {
-        failureContext = "The worktree has no changes to commit; modify files to satisfy the spec.";
+        failureLedger = [...failureLedger, {
+          attempt: current.attempt,
+          context: "The worktree has no changes to commit; modify files to satisfy the spec.",
+        }];
         continue;
       }
 

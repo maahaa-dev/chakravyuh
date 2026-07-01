@@ -215,6 +215,32 @@ describe("runUnit", () => {
     expect(deps.commitAll).toHaveBeenCalledOnce();
   });
 
+  it("cumulative feedback: attempt-2 maker prompt contains attempt-1 blockers labelled by number", async () => {
+    // Scenario: attempt 1 → checker rejects with "fix it"; attempt 2 must see that failure
+    // in its maker prompt, labelled with the attempt number it came from.
+    const { deps, store } = baseDeps();
+    let makerCalls = 0;
+    let attempt2Prompt: string | undefined;
+    (deps.spawn as any).mockImplementation(async (o: any) => {
+      if (o.role === "maker") {
+        makerCalls++;
+        if (makerCalls === 2) attempt2Prompt = o.prompt;
+        return okSpawn("made it");
+      }
+      // checker fails on attempt 1, passes on attempt 2
+      if (o.role === "checker") return okSpawn(makerCalls === 1 ? FAIL : PASS);
+      return okSpawn(PASS); // reviewer always passes
+    });
+    const unit = newWorkUnit({ id: "u1", projectId: "p", slug: "s", title: "t", spec: "do" });
+    store.upsertWorkUnit(unit);
+    const out = await runUnit(project, unit, deps);
+    expect(out.status).toBe("approved");
+    expect(attempt2Prompt).toBeDefined();
+    // Must carry ALL prior-attempt blockers, labelled — not just overwrite with the latest.
+    expect(attempt2Prompt).toContain("Attempt 1 blockers");
+    expect(attempt2Prompt).toContain("fix it"); // the original blocker text from FAIL
+  });
+
   it("empty maker diff (clean worktree) retries instead of crashing on an empty commit", async () => {
     // worktree reports clean (maker changed nothing) even though all roles pass → must NOT commit.
     const { deps, store } = baseDeps({ rootIsClean: vi.fn(() => true) });
