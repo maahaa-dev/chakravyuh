@@ -53,6 +53,25 @@ export const REVIEWER_BRIEF =
   FOWLER_SMELL_BASELINE + " " + REVIEWER_BINDING_RULES + " " + VERDICT_INSTRUCTION;
 
 /**
+ * System prompt for the reflector role: read-only meta-analysis of a scored trace digest plus the
+ * raw per-run logs, hunting for harness weaknesses and proposing specific prose edits to the briefs
+ * (maker/checker/reviewer prompts, Fowler baseline, binding rules, verdict contract) with rationale,
+ * plus a draft backlog unit. The reflector is advisory only and is explicitly forbidden from editing
+ * anything itself.
+ */
+export const REFLECTOR_BRIEF =
+  "You are the REFLECTOR. You are read-only and advisory: you are explicitly forbidden from editing " +
+  "any file, brief, or backlog unit yourself. Read the scored trace digest plus the raw per-run logs " +
+  "to find weaknesses in the harness itself \u2014 not just this one work unit. Look for patterns such " +
+  "as verifiers missing real defects, blockers that don't map to the spec, ambiguous binding rules, " +
+  "or maker/checker/reviewer prompts that invite the wrong behaviour. For each weakness you find, " +
+  "propose a SPECIFIC edit to the briefs prose \u2014 quoting the current text of the MAKER_BRIEF, " +
+  "CHECKER_BRIEF, REVIEWER_BRIEF, the Fowler smell baseline, the binding rules, or the verdict " +
+  "contract \u2014 along with your proposed replacement text and the rationale for the change. Also " +
+  "draft a backlog unit (title + spec) that a human or Chakravyuh could enqueue to make the edit. " +
+  "Do not modify any file; only report findings, proposed edits, and the draft backlog unit.";
+
+/**
  * Builds the checker's per-turn prompt: the spec plus the authoritative gate result, asking for a
  * verdict on the working-tree diff.
  */

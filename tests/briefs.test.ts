@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { MAKER_BRIEF, CHECKER_BRIEF, REVIEWER_BRIEF, checkContract, reviewContract, renderBlockers } from "../src/briefs.js";
+import { MAKER_BRIEF, CHECKER_BRIEF, REVIEWER_BRIEF, REFLECTOR_BRIEF, checkContract, reviewContract, renderBlockers } from "../src/briefs.js";
 import { newWorkUnit } from "../src/domain.js";
 
 const unit = newWorkUnit({ projectId: "p", slug: "s", title: "T", spec: "Make foo safe." });
@@ -48,6 +48,13 @@ describe("briefs", () => {
   it("reviewer brief states the two binding rules", () => {
     expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/repo standards override the baseline/);
     expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/never hard blockers/);
+  });
+
+  it("reflector brief is read-only/advisory", () => {
+    expect(typeof REFLECTOR_BRIEF).toBe("string");
+    expect(REFLECTOR_BRIEF.length).toBeGreaterThan(0);
+    expect(REFLECTOR_BRIEF.toLowerCase()).toMatch(/read-only/);
+    expect(REFLECTOR_BRIEF.toLowerCase()).toMatch(/advisory/);
   });
 
   it("checkContract embeds spec + gate exit code", () => {
