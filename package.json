@@ -15,6 +15,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest --run",
     "test:watch": "vitest",
+    "diagrams": "node scripts/render-diagrams.mjs",
     "chakravyuh": "tsx src/cli.ts"
   },
   "dependencies": {

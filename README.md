@@ -44,11 +44,29 @@ reach anything it shouldn't.
 > **Lineage.** Chakravyuh is *loop engineering* — owning your agent loop instead of renting someone
 > else's. It began as a way to drop the Claude Code dependency and run the loop ourselves. The first
 > version was a bare skeleton; since then it has **built 15 of its own features by running itself on
-> itself** (see [Status](#status)). TypeScript, no framework.
+> itself** (see [Proof](#proof-it-builds-itself)). TypeScript, no framework.
+
+---
+
+## Proof: it builds itself
+
+Chakravyuh isn't a demo. **It has built 15 of its own features by running itself on itself** — a human
+writes the spec, then the loop's own maker writes the code, an independent checker and reviewer each
+vote, and your test gate has the final say before anything lands on a branch. 167 tests, all green.
+
+Those weren't toy changes. The same rings every other change has to break through shipped the
+concurrent backlog drain (`--all`), the two-independent-reviewers design, a live log tail, and a round
+of hardening around how verdicts get parsed. The full list — and an honest "not there yet" — is in
+[Status](#status).
 
 ---
 
 ## What it does
+
+<!-- diagram: what-it-does -->
+<p align="center"><img src="./assets/diagrams/what-it-does.svg" alt="One task enters a throwaway worktree; the maker writes code; a leak guard and your tests gate it; a checker and reviewer vote; passing work commits to a branch, failing work retries up to three times." width="820"></p>
+
+<details><summary>Diagram source (Mermaid)</summary>
 
 ```mermaid
 flowchart TD
@@ -79,6 +97,8 @@ flowchart TD
     class F fail;
     class U,WT,M node;
 ```
+
+</details>
 
 Your test command (the **health gate**) is the boss here. It runs before either reviewer gets a
 vote, and if it fails, neither reviewer even starts, so you don't burn tokens reviewing code that
@@ -230,6 +250,11 @@ fixed "waves"): the moment a slot frees, the next unit whose dependencies are al
 bounded by `maxParallel` (default 2). A single-writer **drain lease** (`drain_lock` row, atomic CAS,
 heartbeat + TTL) stops two `--all` runs from double-draining the same store.
 
+<!-- diagram: all-drain -->
+<p align="center"><img src="./assets/diagrams/all-drain.svg" alt="chakravyuh --all grabs a single drain lock, then repeatedly runs whichever units are ready side by side until none remain, skipping units whose dependencies failed." width="720"></p>
+
+<details><summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 flowchart TD
     S([chakravyuh --all]) --> L{grab the lock<br/>one drain at a time}
@@ -250,6 +275,8 @@ flowchart TD
     class X fail;
     class S,T,RUN node;
 ```
+
+</details>
 
 Ordering follows the dependency edges declared in each spec's `Blocked by:`/`deps:` line — units
 with no edge between them run together, a unit runs only after everything it depends on, and a unit
@@ -279,11 +306,10 @@ you need both, because a clean worktree doesn't stop a rogue `bash` command.
 
 ## Status
 
-This is early, but it works. The core loop runs end-to-end against real model providers through Pi.
-
-Here's the part I find genuinely fun: **Chakravyuh now builds most of its own features by running
-itself on itself.** A human writes the spec, and the loop writes the code, reviews it, and lands it
-on a branch. Fifteen features have gone in this way so far, with 167 tests passing.
+This is early, but it works. The core loop runs end-to-end against real model providers through Pi —
+and, as the [Proof](#proof-it-builds-itself) section up top notes, it now builds most of its own
+features that way: a human writes the spec, the loop writes the code, reviews it, and lands it on a
+branch.
 
 Some of what the loop has built for itself:
 
