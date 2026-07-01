@@ -126,6 +126,9 @@ export async function runUnit(project: Project, unit: WorkUnit, deps: LoopDeps):
     // Built immutably each iteration — prior entries are never mutated, only spread into a new array.
     // Stays naturally small because attempts are capped by maxAttemptsPerUnit.
     let failureLedger: ReadonlyArray<{ readonly attempt: number; readonly context: string }> = [];
+    const noteBlocker = (context: string): void => {
+      failureLedger = [...failureLedger, { attempt: current.attempt, context }];
+    };
 
     while (current.attempt < deps.budget.maxAttemptsPerUnit) {
       if (deps.stopRequested()) return fail("blocked");
@@ -151,7 +154,7 @@ export async function runUnit(project: Project, unit: WorkUnit, deps: LoopDeps):
       // verifiers now spawn together, and either may overshoot the cap by one run).
       if (overCap()) return fail("failed"); // don't spawn the checker+reviewer pair over budget
       if (makerRes.stopReason !== "stop") {
-        failureLedger = [...failureLedger, { attempt: current.attempt, context: "Maker did not complete; retry." }];
+        noteBlocker("Maker did not complete; retry.");
         continue;
       }
       if (deps.stopRequested()) return fail("blocked");
@@ -163,7 +166,7 @@ export async function runUnit(project: Project, unit: WorkUnit, deps: LoopDeps):
       setStatus("checking");
       const gateAfter = deps.runHealth(project.healthCmd, worktree, deps.budget.hardTimeoutMs);
       if (gateAfter.exitCode !== 0) {
-        failureLedger = [...failureLedger, { attempt: current.attempt, context: renderBlockers([], gateAfter) }];
+        noteBlocker(renderBlockers([], gateAfter));
         continue;
       }
       if (deps.stopRequested()) return fail("blocked");
@@ -193,13 +196,10 @@ export async function runUnit(project: Project, unit: WorkUnit, deps: LoopDeps):
       addTokens(checkRes);
       addTokens(reviewRes); // accounted, but this is the last spawn pair — do not fail-after.
       if (!cVerdict.pass || !rVerdict.pass) {
-        failureLedger = [...failureLedger, {
-          attempt: current.attempt,
-          context: renderBlockers([
-            { axis: "Spec", verdict: cVerdict },
-            { axis: "Standards", verdict: rVerdict },
-          ]),
-        }];
+        noteBlocker(renderBlockers([
+          { axis: "Spec", verdict: cVerdict },
+          { axis: "Standards", verdict: rVerdict },
+        ]));
         continue;
       }
 
@@ -207,10 +207,7 @@ export async function runUnit(project: Project, unit: WorkUnit, deps: LoopDeps):
       // empty `git commit` would throw and crash the run, so treat a clean worktree as an
       // incomplete attempt and retry rather than committing nothing.
       if (deps.rootIsClean(worktree)) {
-        failureLedger = [...failureLedger, {
-          attempt: current.attempt,
-          context: "The worktree has no changes to commit; modify files to satisfy the spec.",
-        }];
+        noteBlocker("The worktree has no changes to commit; modify files to satisfy the spec.");
         continue;
       }
 
