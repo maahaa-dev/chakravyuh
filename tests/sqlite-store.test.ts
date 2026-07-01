@@ -37,4 +37,16 @@ describe("SqliteStore", () => {
     expect(rows.map((r) => r.role)).toEqual(["maker", "checker"]);
     s.close();
   });
+
+  it("assigns monotonic seq that survives a deleted row (no COUNT(*) collision)", () => {
+    const s = new SqliteStore(":memory:") as any;
+    s.saveRun(run({ id: "r1", role: "maker" }));   // seq 0
+    s.saveRun(run({ id: "r2", role: "checker" })); // seq 1
+    s.db.prepare("DELETE FROM runs WHERE id='r1'").run(); // COUNT(*) would now reuse 1
+    s.saveRun(run({ id: "r3", role: "reviewer" }));
+    const seqs = s.db.prepare("SELECT seq FROM runs ORDER BY seq").all().map((r: any) => r.seq);
+    expect(new Set(seqs).size).toBe(seqs.length); // all distinct
+    expect(s.runsForUnit("u1").map((r: Run) => r.role)).toEqual(["checker", "reviewer"]);
+    s.close();
+  });
 });

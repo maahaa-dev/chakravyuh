@@ -70,7 +70,10 @@ export class SqliteStore implements WorkStore {
   }
 
   saveRun(run: Run): void {
-    const seq = (this.db.prepare("SELECT COUNT(*) c FROM runs").get() as any).c;
+    // Next seq = one past the current max, not COUNT(*): COUNT collides with a live row's seq the
+    // moment any run is deleted (and is fragile under interleaved writes), whereas MAX(seq)+1 stays
+    // monotonic. COALESCE handles the empty table (first run gets seq 0, preserving prior ordering).
+    const seq = (this.db.prepare("SELECT COALESCE(MAX(seq), -1) + 1 AS n FROM runs").get() as any).n;
     this.db.prepare(`
       INSERT INTO runs (id,work_unit_id,role,attempt,provider,model,thinking,session_id,
         started_at,ended_at,stop_reason,tokens_in,tokens_out,verdict_json,exit_reason,seq)
