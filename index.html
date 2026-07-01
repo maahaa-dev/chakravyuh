@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chakravyuh — entry is easy, the centre is earned</title>
+<meta name="description" content="An owned maker to checker to reviewer loop that drives an AI coding agent through your tests, a checker, and an independent reviewer until a change is review-ready on a branch. From maahaa.dev.">
+<link rel="icon" href="assets/chakravyuh-favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="Chakravyuh — entry is easy, the centre is earned">
+<meta property="og:description" content="An owned maker to checker to reviewer loop for AI coding agents. A change breaks through your tests, a checker, and an independent reviewer before it reaches a branch.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/chakravyuh-banner-ink.png">
+<meta property="og:url" content="https://maahaa-dev.github.io/chakravyuh/">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,400..600&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --ink:     #0a0612;
+    --ink-2:   #15102a;
+    --ink-3:   #1c1635;
+    --paper:   #f5ede0;
+    --paper-2: #d6cdba;
+    --muted:   #8a7f99;
+    --gold:    #f4a93b;
+    --gold-2:  #d97a1f;
+    --violet:  #7a5ec7;
+    --rule:    rgba(245, 237, 224, 0.09);
+    --rule-2:  rgba(245, 237, 224, 0.16);
+
+    --font-display: 'Fraunces', 'Times New Roman', serif;
+    --font-body:    'Outfit', system-ui, -apple-system, sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+    --maxw: 1080px;
+    --pad:  clamp(1.25rem, 5vw, 3rem);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-weight: 300;
+    font-size: 1.06rem;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--gold); color: var(--ink); }
+  a { color: inherit; }
+
+  .wrap { max-width: var(--maxw); margin-inline: auto; padding-inline: var(--pad); }
+
+  /* grid/flex children must be allowed to shrink below their content's min width, or a long
+     unbreakable token (the repo URL inside <pre>) forces the whole page wider than the phone */
+  .split > *, .qs > *, .rings > *, .why > * { min-width: 0; }
+  pre { min-width: 0; max-width: 100%; }
+
+  /* atmospheric ground: a single faint violet-to-ink field, no gradient slop */
+  .field {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(60% 50% at 18% 8%, rgba(122, 94, 199, 0.16), transparent 70%),
+      radial-gradient(50% 40% at 90% 0%, rgba(244, 169, 59, 0.07), transparent 70%),
+      var(--ink);
+  }
+
+  /* ---------- nav ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 40;
+    height: 74px; display: flex; align-items: center;
+    backdrop-filter: blur(10px);
+    background: rgba(10, 6, 18, 0.6);
+    border-bottom: 1px solid var(--rule);
+  }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+  .brand { display: flex; align-items: center; gap: 12px; font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.01em; text-decoration: none; }
+  .brand svg { width: 36px; height: 36px; color: var(--paper); }
+  .brand b { font-weight: 600; }
+  .brand .v { color: var(--gold); font-style: italic; font-weight: 600; font-size: 1.12em; }
+  .nav-links { display: flex; align-items: center; gap: clamp(1rem, 3vw, 2rem); font-size: 1rem; }
+  .nav-links a { color: var(--paper-2); text-decoration: none; transition: color .18s; }
+  .nav-links a:hover { color: var(--paper); }
+  .nav-cta { color: var(--ink) !important; background: var(--gold); padding: 8px 16px; border-radius: 999px; font-weight: 500; }
+  .nav-cta:hover { background: #ffbf57; }
+  .nav-star { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--rule-2); color: var(--paper-2); text-decoration: none; transition: border-color .18s, color .18s; }
+  .nav-star:hover { border-color: var(--gold); color: var(--gold); }
+  .nav-star svg { width: 15px; height: 15px; }
+  .nav-star .cnt { font-family: var(--font-mono); font-size: 0.86rem; }
+  @media (max-width: 620px) { .nav-links a.hide-sm { display: none; } }
+
+  /* ---------- hero ---------- */
+  .hero { min-height: calc(100dvh - 74px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: clamp(2rem,6vw,4rem) var(--pad) clamp(3rem,7vw,5rem); }
+  .eyebrow { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.34em; text-transform: uppercase; color: var(--gold); margin-bottom: clamp(1.5rem, 4vw, 2.5rem); }
+  .hero-mark { width: clamp(96px, 15vw, 150px); height: clamp(96px, 15vw, 150px); color: var(--paper); margin-bottom: clamp(1.5rem, 4vw, 2.25rem); }
+  h1 { font-family: var(--font-display); font-weight: 340; font-size: clamp(2.6rem, 7vw, 5rem); line-height: 1.04; letter-spacing: -0.015em; margin: 0; }
+  h1 .earn { color: var(--gold); font-style: italic; font-weight: 420; }
+  .lede { max-width: 40ch; margin: clamp(1.4rem,3vw,2rem) auto 0; color: var(--paper-2); font-size: clamp(1.14rem, 1.8vw, 1.4rem); }
+  .hero-cite { margin: 0.9rem auto 0; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.01em; color: var(--muted); }
+  .hero-cite a { color: var(--paper-2); text-decoration: none; border-bottom: 1px solid var(--rule-2); }
+  .hero-cite a:hover { color: var(--gold); border-color: var(--gold); }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: clamp(2rem, 4vw, 2.75rem); }
+  .btn { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-body); font-size: 1.05rem; font-weight: 500; padding: 12px 22px; border-radius: 999px; text-decoration: none; transition: transform .16s, background .18s, border-color .18s; }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--gold); color: var(--ink); }
+  .btn-primary:hover { background: #ffbf57; }
+  .btn-ghost { border: 1px solid var(--rule-2); color: var(--paper); }
+  .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+  .btn svg { width: 18px; height: 18px; }
+
+  /* ---------- section frame ---------- */
+  /* offset anchor targets so a jump clears the 74px sticky nav instead of hiding under it */
+  section.block, header.hero { scroll-margin-top: 84px; }
+  section.block { padding: clamp(3.5rem, 9vw, 7rem) 0; border-top: 1px solid var(--rule); }
+  .sec-title { font-family: var(--font-display); font-weight: 360; font-size: clamp(1.9rem, 4.2vw, 3rem); line-height: 1.1; letter-spacing: -0.01em; margin: 0 0 1rem; }
+  .sec-title em { color: var(--gold); font-style: italic; }
+  .sec-lede { color: var(--paper-2); max-width: 62ch; font-size: 1.18rem; margin: 0; line-height: 1.6; }
+
+  /* ---------- what-it-does: asymmetric split ---------- */
+  .split { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: clamp(2rem, 5vw, 4rem); align-items: start; }
+  @media (max-width: 820px) { .split { grid-template-columns: 1fr; } }
+  .flow-rail { display: flex; flex-direction: column; gap: 2px; font-family: var(--font-mono); font-size: 0.9rem; }
+  .flow-step { display: flex; align-items: baseline; gap: 14px; padding: 15px 18px; background: var(--ink-2); border: 1px solid var(--rule); }
+  .flow-step:first-child { border-radius: 12px 12px 0 0; }
+  .flow-step:last-child { border-radius: 0 0 12px 12px; }
+  .flow-step .k { color: var(--gold); font-weight: 500; min-width: 1.4em; }
+  .flow-step .t { color: var(--paper-2); }
+  .flow-step b { color: var(--paper); font-weight: 500; }
+  .flow-step.centre { background: linear-gradient(180deg, rgba(244,169,59,0.14), rgba(244,169,59,0.05)); border-color: rgba(244,169,59,0.35); }
+  .flow-step.centre .t, .flow-step.centre b { color: var(--gold); }
+
+  /* ---------- rings: stepped rail ---------- */
+  .rings { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-top: clamp(2rem,5vw,3rem); }
+  @media (max-width: 860px) { .rings { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .rings { grid-template-columns: 1fr; } }
+  .ring { padding: 22px 20px; border: 1px solid var(--rule); border-radius: 14px; background: var(--ink-2); }
+  .ring .n { font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); letter-spacing: 0.15em; }
+  .ring h3 { font-family: var(--font-display); font-weight: 440; font-size: 1.22rem; margin: 10px 0 8px; }
+  .ring p { margin: 0; font-size: 1.02rem; color: var(--paper-2); line-height: 1.5; }
+  .ring.gate { border-color: rgba(244,169,59,0.4); }
+  .ring.gate .n { color: var(--gold); }
+
+  /* ---------- principles: 2-col ---------- */
+  .why { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: clamp(2rem,5vw,3rem); border: 1px solid var(--rule); border-radius: 16px; overflow: hidden; }
+  @media (max-width: 720px) { .why { grid-template-columns: 1fr; } }
+  .why > div { padding: clamp(1.4rem, 3vw, 2rem); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+  .why > div:nth-child(-n+2) { border-top: none; }
+  @media (max-width: 720px) { .why > div { border-left: none; } .why > div:nth-child(2) { border-top: 1px solid var(--rule); } }
+  .why h3 { font-family: var(--font-display); font-weight: 440; font-size: 1.28rem; margin: 0 0 0.5rem; display: flex; align-items: center; gap: 10px; }
+  .why h3 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex: none; }
+  .why p { margin: 0; color: var(--paper-2); font-size: 1.05rem; line-height: 1.58; }
+  .why .wide { grid-column: 1 / -1; }
+
+  /* ---------- philosophy: numbered 2-col, no row rules ---------- */
+  .tenets { list-style: none; margin: clamp(2rem,5vw,3rem) 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.6rem,3vw,2.4rem) clamp(2rem,5vw,4rem); }
+  .tenets li { display: flex; gap: 16px; align-items: baseline; }
+  .tenets .tn { font-family: var(--font-mono); font-size: 0.9rem; color: var(--gold); flex: none; }
+  .tenets b { font-family: var(--font-display); font-weight: 460; font-size: 1.24rem; display: block; margin-bottom: 3px; color: var(--paper); }
+  .tenets p { margin: 0; color: var(--paper-2); font-size: 1rem; line-height: 1.5; }
+  .tenet-cite { margin: clamp(2rem,4vw,2.75rem) 0 0; color: var(--muted); font-size: 1rem; max-width: 70ch; }
+  .tenet-cite a { color: var(--paper-2); text-decoration: none; border-bottom: 1px solid var(--rule-2); }
+  .tenet-cite a:hover { color: var(--gold); border-color: var(--gold); }
+  @media (max-width: 720px) { .tenets { grid-template-columns: 1fr; } }
+
+  /* ---------- quick start: code panel ---------- */
+  .qs { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: clamp(2rem,5vw,3.5rem); align-items: center; }
+  @media (max-width: 820px) { .qs { grid-template-columns: 1fr; } }
+  pre { margin: 0; background: #060410; border: 1px solid var(--rule-2); border-radius: 14px; padding: 22px 22px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.7; color: var(--paper-2); }
+  pre .c { color: var(--muted); }
+  pre .g { color: var(--gold); }
+  .qs-note { font-size: 1rem; color: var(--muted); margin-top: 1rem; }
+  .qs-note code { font-family: var(--font-mono); color: var(--paper-2); }
+
+  /* ---------- footer ---------- */
+  footer { border-top: 1px solid var(--rule); padding: clamp(2.5rem,6vw,4rem) 0; }
+  footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.5rem; }
+  footer .brand svg { width: 30px; height: 30px; }
+  .foot-links { display: flex; gap: 1.5rem; font-size: 1rem; }
+  .foot-links a { color: var(--paper-2); text-decoration: none; }
+  .foot-links a:hover { color: var(--gold); }
+  .foot-meta { width: 100%; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem 1.5rem; color: var(--muted); font-size: 0.84rem; font-family: var(--font-mono); letter-spacing: 0.02em; border-top: 1px solid var(--rule); padding-top: 1.25rem; }
+
+  /* ---------- reveal motion ---------- */
+  [data-reveal] { opacity: 0; transform: translateY(22px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
+  [data-reveal].in { opacity: 1; transform: none; }
+
+  /* the whole formation settles in; arcs only FADE so their SVG rotate() survives
+     (a CSS transform on an arc would override the attribute rotation and collapse
+     every gap to the same angle), centre earned last */
+  .hero-mark { animation: markSettle 1s cubic-bezier(.16,1,.3,1) both; }
+  .hero-mark .arc { opacity: 0; animation: arcFade .7s ease forwards; }
+  .hero-mark .a1 { animation-delay: .2s; }
+  .hero-mark .a2 { animation-delay: .38s; }
+  .hero-mark .a3 { animation-delay: .56s; }
+  .hero-mark .bindu { opacity: 0; transform-box: fill-box; transform-origin: center; animation: binduIn .5s cubic-bezier(.34,1.56,.64,1) .84s forwards; }
+  @keyframes markSettle { from { opacity: 0; transform: rotate(-24deg) scale(.86); } to { opacity: 1; transform: none; } }
+  @keyframes arcFade { to { opacity: 1; } }
+  @keyframes binduIn { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: none; } }
+
+  /* ---------- mobile ---------- */
+  @media (max-width: 640px) {
+    nav { height: 62px; }
+    .brand { font-size: 1.28rem; gap: 9px; }
+    .brand svg { width: 30px; height: 30px; }
+    .nav-star { display: none; }              /* keep the bar uncrowded; GitHub pill stays */
+    .nav-cta { padding: 7px 14px; }
+
+    .hero { min-height: calc(100dvh - 62px); padding-top: 2.25rem; }
+    .hero-mark { width: 86px; height: 86px; }
+    .eyebrow { font-size: 0.66rem; letter-spacing: 0.24em; margin-bottom: 1.5rem; }
+    h1 { font-size: clamp(2rem, 9vw, 2.7rem); line-height: 1.08; }
+    .lede { font-size: 1.1rem; max-width: 32ch; }
+    .hero-cite { font-size: 0.74rem; line-height: 1.5; padding-inline: 0.5rem; }
+    .cta-row { width: 100%; }
+    .btn { flex: 1 1 auto; justify-content: center; }
+
+    section.block { padding: 3rem 0; }
+    .sec-title { font-size: clamp(1.7rem, 7.5vw, 2.2rem); }
+    .sec-lede { font-size: 1.08rem; }
+    .why > div { padding: 1.3rem; }
+    pre { font-size: 0.8rem; padding: 18px 16px; }
+
+    footer .wrap { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
+    .foot-meta { flex-direction: column; gap: 0.5rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal] { opacity: 1; transform: none; transition: none; }
+    .hero-mark, .hero-mark .arc, .hero-mark .bindu { opacity: 1; animation: none; transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="field"></div>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Chakravyuh home">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-dasharray="215 36" transform="rotate(296 50 50)"/><circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-dasharray="146 29" transform="rotate(90 50 50)"/><circle cx="50" cy="50" r="6.5" fill="#f4a93b"/></svg>
+      <span><b>Chakra</b><span class="v">Vyuh</span></span>
+    </a>
+    <div class="nav-links">
+      <a class="hide-sm" href="#how">How it works</a>
+      <a class="hide-sm" href="#why">Why</a>
+      <a class="hide-sm" href="#thinking">Philosophy</a>
+      <a class="hide-sm" href="#quickstart">Quick start</a>
+      <a class="nav-star" href="https://github.com/maahaa-dev/chakravyuh/stargazers" aria-label="Star Chakravyuh on GitHub">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6l2.85 5.77 6.37.93-4.61 4.49 1.09 6.35L12 17.02l-5.7 3.12 1.09-6.35L2.78 9.3l6.37-.93z"/></svg>
+        <span class="cnt" id="star-count">Star</span>
+      </a>
+      <a class="nav-cta" href="https://github.com/maahaa-dev/chakravyuh">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="eyebrow">chakravyuh · loop engineering</div>
+  <svg class="hero-mark" viewBox="0 0 100 100" role="img" aria-label="Chakravyuh mark: three rings breaching to a centre">
+    <circle class="arc a1" cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-dasharray="215.02 36.3" transform="rotate(296 50 50)"/>
+    <circle class="arc a2" cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-dasharray="146.61 29.32" transform="rotate(90 50 50)"/>
+    <circle class="arc a3" cx="50" cy="50" r="16" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-dasharray="80.42 20.11" transform="rotate(236 50 50)"/>
+    <circle class="bindu" cx="50" cy="50" r="6.5" fill="#f4a93b"/>
+  </svg>
+  <h1>Entry is easy.<br>The centre is <span class="earn">earned</span>.</h1>
+  <p class="lede">GSD, BMAD and Spec-Kit hand you someone else's process. Chakravyuh hands you the loop.</p>
+  <p class="hero-cite">After <a href="https://github.com/mattpocock/skills">Matt Pocock</a>'s case for owning your loop, not renting a framework.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="https://github.com/maahaa-dev/chakravyuh">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+      View on GitHub
+    </a>
+    <a class="btn btn-ghost" href="#quickstart">Quick start</a>
+  </div>
+</header>
+
+<main>
+  <!-- WHAT IT DOES -->
+  <section class="block" id="what">
+    <div class="wrap split">
+      <div data-reveal>
+        <h2 class="sec-title">You hand it one task. It makes the agent <em>finish</em>.</h2>
+        <p class="sec-lede">A change enters easily but only reaches the centre, merged, by breaking through every ring: your tests, then a checker, then an independent reviewer. Each ring refuses half-finished work and sends it back. Chakravyuh runs the agent so you don't have to sit and watch it, and it never merges for you.</p>
+      </div>
+      <div class="flow-rail" data-reveal aria-label="The loop, top to bottom">
+        <div class="flow-step"><span class="k">1</span><span class="t"><b>Maker</b> writes the code, sandboxed, TDD-first</span></div>
+        <div class="flow-step"><span class="k">2</span><span class="t"><b>Your tests</b> run. Red gate, no vote counts</span></div>
+        <div class="flow-step"><span class="k">3</span><span class="t"><b>Checker</b> reads it against the spec</span></div>
+        <div class="flow-step"><span class="k">3</span><span class="t"><b>Reviewer</b> reads it for quality, a different model</span></div>
+        <div class="flow-step centre"><span class="k">◉</span><span class="t"><b>The centre</b> committed to a branch. You merge</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW: one attempt -->
+  <section class="block" id="how">
+    <div class="wrap">
+      <h2 class="sec-title">One attempt, ring by ring.</h2>
+      <p class="sec-lede">Every attempt runs in a throwaway git worktree with the maker's shell sandboxed. Fail any ring and the blockers feed back into the next try, up to three.</p>
+      <div class="rings">
+        <div class="ring" data-reveal><div class="n">WORKTREE</div><h3>Isolate</h3><p>A fresh branch off your base, so a bad run touches nothing real.</p></div>
+        <div class="ring" data-reveal><div class="n">MAKER</div><h3>Build</h3><p>Pi writes the slice with edit and write tools, confined to the worktree.</p></div>
+        <div class="ring gate" data-reveal><div class="n">HEALTH GATE</div><h3>Prove</h3><p>Your command runs. Non-zero exit ends the attempt before any model votes.</p></div>
+        <div class="ring" data-reveal><div class="n">CHECKER ∥ REVIEWER</div><h3>Judge</h3><p>Two read-only agents run at once: spec, and standards. Both must pass.</p></div>
+        <div class="ring" data-reveal><div class="n">COMMIT</div><h3>Land</h3><p>Gate green and both approve, so the change commits on its own branch.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section class="block" id="why">
+    <div class="wrap">
+      <h2 class="sec-title">Why it looks like this.</h2>
+      <div class="why">
+        <div data-reveal><h3><span class="dot"></span>Your tests are the boss</h3><p>The checker and reviewer are LLMs, so they can be wrong. Your health command is a plain exit code, and it runs before any model vote counts.</p></div>
+        <div data-reveal><h3><span class="dot"></span>The maker can't grade its own work</h3><p>Enforced by tools, not trust. The maker gets edit and write; the reviewers get read-only, on a different model, so it's a genuine second look.</p></div>
+        <div data-reveal><h3><span class="dot"></span>The limits come from outside</h3><p>The loop bounds itself on attempts, an idle timeout, a hard timeout, and a token cap, never on dollars the provider may misreport.</p></div>
+        <div data-reveal><h3><span class="dot"></span>A missing verdict counts as no</h3><p>If a reviewer's verdict is missing or unparseable, that's a rejection. We never read silence as approval.</p></div>
+        <div class="wide" data-reveal><h3><span class="dot"></span>Isolation in layers</h3><p>Each attempt runs in its own git worktree. After the maker finishes, the real repo has to be clean, and a leak guard fails the task if it wrote anywhere else. On top of that the maker's shell is boxed in by a sandbox, because a clean worktree can't stop a rogue command.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHILOSOPHY -->
+  <section class="block" id="thinking">
+    <div class="wrap">
+      <h2 class="sec-title">The thinking behind the loop.</h2>
+      <p class="sec-lede">Software fundamentals matter more in the agent age, not less. Six articles keep the loop honest.</p>
+      <ol class="tenets">
+        <li data-reveal><span class="tn">00</span><div><b>Own the loop</b><p>Rent the skills, keep control of the process.</p></div></li>
+        <li data-reveal><span class="tn">01</span><div><b>Align before code</b><p>The common failure is misalignment, not bad code.</p></div></li>
+        <li data-reveal><span class="tn">02</span><div><b>One shared language</b><p>Everyone names concepts with the same glossary.</p></div></li>
+        <li data-reveal><span class="tn">03</span><div><b>Feedback sets the pace</b><p>The deterministic gate is the boss, not any model.</p></div></li>
+        <li data-reveal><span class="tn">04</span><div><b>Design every day</b><p>Deep modules, small interfaces, surgical changes.</p></div></li>
+        <li data-reveal><span class="tn">05</span><div><b>Right-size the process</b><p>The lightest process that still protects quality.</p></div></li>
+      </ol>
+      <p class="tenet-cite" data-reveal>Grounded in <a href="https://github.com/mattpocock/skills">Matt Pocock's skills</a> and the <a href="https://github.com/that-in-rust/agent-room-of-requirements">12 Principles of LLM-Native Development</a> by amuldotexe. <a href="https://github.com/maahaa-dev/chakravyuh/blob/main/CONSTITUTION.md">Read the constitution &rarr;</a></p>
+    </div>
+  </section>
+
+  <!-- QUICK START -->
+  <section class="block" id="quickstart">
+    <div class="wrap qs">
+      <div data-reveal>
+        <h2 class="sec-title">Try the loop harness in 60 seconds.</h2>
+        <p class="sec-lede">Standalone and offline. This proves the harness builds and its logic is sound, with the coding agent fully mocked.</p>
+        <p class="qs-note">A real run drives a <a href="https://github.com/maahaa-dev/chakravyuh#quick-start" style="color:var(--gold)">Pi</a> coding agent against your own repo. TypeScript, no framework, Apache-2.0.</p>
+      </div>
+      <pre data-reveal><span class="c"># clone, build, and run the test suite</span>
+git clone https://github.com/maahaa-dev/chakravyuh
+cd chakravyuh
+npm install
+npm run build   <span class="c"># tsc, must be clean</span>
+npm test        <span class="g"># 167 unit tests, agent fully mocked</span></pre>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Chakravyuh">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-dasharray="215 36" transform="rotate(296 50 50)"/><circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-dasharray="146 29" transform="rotate(90 50 50)"/><circle cx="50" cy="50" r="6.5" fill="#f4a93b"/></svg>
+      <span><b>Chakra</b><span class="v">Vyuh</span></span>
+    </a>
+    <div class="foot-links">
+      <a href="https://github.com/maahaa-dev/chakravyuh">GitHub</a>
+      <a href="https://github.com/maahaa-dev/chakravyuh#quick-start">Docs</a>
+      <a href="https://maahaa.dev">maahaa.dev</a>
+    </div>
+    <div class="foot-meta">
+      <span>चक्रव्यूह · the formation your code earns its way through</span>
+      <span>© 2026 maahaa.dev · Apache-2.0</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // scroll reveal, IntersectionObserver, no scroll listeners
+  (function () {
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var items = document.querySelectorAll('[data-reveal]');
+    if (reduce || !('IntersectionObserver' in window)) {
+      items.forEach(function (el) { el.classList.add('in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+    items.forEach(function (el) { io.observe(el); });
+  })();
+
+  // live GitHub star count, best-effort (unauthenticated API); leaves "Star" on failure
+  (function () {
+    fetch('https://api.github.com/repos/maahaa-dev/chakravyuh')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || typeof d.stargazers_count !== 'number') return;
+        var n = d.stargazers_count;
+        var el = document.getElementById('star-count');
+        if (el) el.textContent = n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
+      })
+      .catch(function () {});
+  })();
+</script>
+</body>
+</html>
