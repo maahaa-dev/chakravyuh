@@ -63,6 +63,11 @@ of hardening around how verdicts get parsed. The full list — and an honest "no
 
 ## What it does
 
+<!-- diagram: what-it-does -->
+<p align="center"><img src="./assets/diagrams/what-it-does.svg" alt="One task enters a throwaway worktree; the maker writes code; a leak guard and your tests gate it; a checker and reviewer vote; passing work commits to a branch, failing work retries up to three times." width="820"></p>
+
+<details><summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 flowchart TD
     U([your task]) --> WT[a fresh, throwaway<br/>copy of your repo]
@@ -92,6 +97,8 @@ flowchart TD
     class F fail;
     class U,WT,M node;
 ```
+
+</details>
 
 Your test command (the **health gate**) is the boss here. It runs before either reviewer gets a
 vote, and if it fails, neither reviewer even starts, so you don't burn tokens reviewing code that
@@ -243,6 +250,11 @@ fixed "waves"): the moment a slot frees, the next unit whose dependencies are al
 bounded by `maxParallel` (default 2). A single-writer **drain lease** (`drain_lock` row, atomic CAS,
 heartbeat + TTL) stops two `--all` runs from double-draining the same store.
 
+<!-- diagram: all-drain -->
+<p align="center"><img src="./assets/diagrams/all-drain.svg" alt="chakravyuh --all grabs a single drain lock, then repeatedly runs whichever units are ready side by side until none remain, skipping units whose dependencies failed." width="720"></p>
+
+<details><summary>Diagram source (Mermaid)</summary>
+
 ```mermaid
 flowchart TD
     S([chakravyuh --all]) --> L{grab the lock<br/>one drain at a time}
@@ -263,6 +275,8 @@ flowchart TD
     class X fail;
     class S,T,RUN node;
 ```
+
+</details>
 
 Ordering follows the dependency edges declared in each spec's `Blocked by:`/`deps:` line — units
 with no edge between them run together, a unit runs only after everything it depends on, and a unit
