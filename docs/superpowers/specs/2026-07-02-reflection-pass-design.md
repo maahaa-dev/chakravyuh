@@ -14,6 +14,7 @@ This takes the paper's *trace-rich advisory* core while deliberately **not** tak
 
 1. **Genotype = briefs only (v1).** The reflector may propose edits only to `briefs.ts` prose: `MAKER_BRIEF`, `CHECKER_BRIEF`, `REVIEWER_BRIEF`, `FOWLER_SMELL_BASELINE`, `REVIEWER_BINDING_RULES`, `VERDICT_INSTRUCTION`, and the contract builders. Role model-routing and budgets stay hand-set. Rationale: smallest, most legible surface; the paper locates most leverage in prompt/feedback quality; keeps blast radius tiny.
 2. **Advisory command, not an autonomous loop.** Reflection produces a *document*, never a diff or a commit. The human is the accept gate; the existing self-host loop is the apply-and-validate mechanism.
+3. **Proposals are files, filtered from the loop by construction.** A proposal is a markdown file under `loops/<proj>/reflections/`, never a `WorkUnit` and never written into `backlog.md`. The drain loop (`--all`) only ever parses `backlog.md`, so it *cannot* see a proposal — no new status and no change to `unitsToDrain` is needed to keep proposals out of autonomous draining. A `WorkUnit` normally carries a buildable spec; a proposal has none, so it is deliberately not modeled as one. Visibility comes from a status line, not from the unit lifecycle (see below).
 
 ## Architecture
 
@@ -24,6 +25,7 @@ Three small, independently testable units. All reflection I/O is read-only over 
 | `reflect.ts` — `buildReflectionInput(units, runs, logDir)` | **Pure.** Fold store rows + per-run log paths + per-unit outcomes into a scored trace digest object. | in-memory `WorkUnit[]`, `Run[]`, `logDir` path | nothing (returns data) |
 | `REFLECTOR_BRIEF` (in `briefs.ts`) | System prompt for the reflector role: read the digest + raw logs, find harness weaknesses, propose specific `briefs.ts` edits with rationale, and draft a ready-to-paste backlog unit. Read-only; forbidden from editing. | — | — |
 | `reflect` CLI subcommand | Thin wiring: load store → `buildReflectionInput` → spawn reflector (read-only tools, pinned Pi + extension) → save its output as a proposal markdown. | `config.json` | `loops/<proj>/reflections/<ts>.md` |
+| `status.ts` visibility line | Count proposal files under `reflections/` and add one line, e.g. `reflections: N pending review`, to the `status` / `current.md` output. Proposals are surfaced here, NOT via the `WorkUnit` lifecycle. | `reflections/` dir listing | — |
 
 ### Component detail
 
@@ -71,6 +73,8 @@ The reflector receives these plus the raw log paths, so it reasons over un-compr
 - `buildReflectionInput` is pure → unit-tested with fake `WorkUnit[]` / `Run[]`: scoring math (attempts, token sums, reject-reason extraction), digest shape, and correct log-path pairing. This is where coverage concentrates.
 - `reflect` CLI wiring → tested like existing subcommands (arg parsing, read-only store access, output path under `reflections/`), with a fake spawn.
 - Reflector output is non-deterministic → asserted only structurally ("writes a file containing the required sections"), never on content.
+- Loop isolation: a test asserting `unitsToDrain` never returns a proposal — trivially true because proposals are not parsed from `backlog.md`, but worth an explicit regression test so a future change can't quietly start draining them.
+- Status visibility: the `reflections: N pending review` line is pure over a directory listing → unit-tested with a fake count (0 → line omitted; N>0 → line present).
 
 ## Out of scope (v1)
 
