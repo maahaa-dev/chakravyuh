@@ -18,12 +18,26 @@ describe("briefs", () => {
     expect(MAKER_BRIEF.toLowerCase()).toMatch(/red.*green.*refactor/);
   });
 
+  it("maker brief discourages redundant re-searching once an answer is already in-session", () => {
+    expect(MAKER_BRIEF.toLowerCase()).toMatch(/trivially reworded pattern/);
+    expect(MAKER_BRIEF.toLowerCase()).toMatch(/prefer reading a whole relevant file once/);
+  });
+
   it("checker brief names the Spec axis", () => {
     expect(CHECKER_BRIEF).toMatch(/Spec axis/);
     expect(CHECKER_BRIEF.toLowerCase()).toMatch(/missing/);
     expect(CHECKER_BRIEF.toLowerCase()).toMatch(/scope creep/);
     expect(CHECKER_BRIEF.toLowerCase()).toMatch(/implemented wrongly/);
     expect(CHECKER_BRIEF.toLowerCase()).toMatch(/quot/);
+  });
+
+  it("checker brief adds category (d) for requirements satisfied but untested", () => {
+    expect(CHECKER_BRIEF.toLowerCase()).toMatch(/that no test actually asserts/);
+  });
+
+  it("checker brief requires checking every behavioral bullet, not just the Success sentence", () => {
+    expect(CHECKER_BRIEF).toMatch(/EVERY behavioral bullet/);
+    expect(CHECKER_BRIEF.toLowerCase()).toMatch(/does not waive a requirement/);
   });
 
   it("reviewer brief names the Standards axis and contains the full Fowler smell baseline", () => {
@@ -45,9 +59,18 @@ describe("briefs", () => {
     for (const smell of smells) expect(REVIEWER_BRIEF).toMatch(smell);
   });
 
-  it("reviewer brief states the two binding rules", () => {
+  it("reviewer brief states the binding rules, including rule (3) on cross-path consistency", () => {
     expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/repo standards override the baseline/);
     expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/never hard blockers/);
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/is not a baseline smell/);
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/same weight as a repo-standards violation/);
+  });
+
+  it("reviewer brief adds cross-path consistency to the Standards axis", () => {
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/cross-path consistency/);
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/sibling path/);
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/another cli subcommand/);
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/another spawn call/);
   });
 
   it("reflector brief is read-only/advisory", () => {
