@@ -30,4 +30,11 @@ describe("loadConfig", () => {
     const bad: any = { ...valid }; delete bad.roles;
     expect(() => loadConfig(writeConfig(bad))).toThrow();
   });
+  it("parses an optional budget override", () => {
+    const cfg = loadConfig(writeConfig({ ...valid, budget: { hardTimeoutMs: 3_600_000 } }));
+    expect(cfg.budget?.hardTimeoutMs).toBe(3_600_000);
+  });
+  it("rejects a below-minimum budget timeout", () => {
+    expect(() => loadConfig(writeConfig({ ...valid, budget: { hardTimeoutMs: 10 } }))).toThrow();
+  });
 });

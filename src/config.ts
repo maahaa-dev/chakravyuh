@@ -15,6 +15,15 @@ const ConfigSchema = z.object({
   }),
   roles: z.object({ maker: RoleSchema, checker: RoleSchema, reviewer: RoleSchema }),
   backlogPath: z.string(), dbPath: z.string(), currentMdPath: z.string(), piBinPath: z.string(),
+  // Optional per-project budget override. Any omitted field falls back to DEFAULT_BUDGET (see cli.ts).
+  // Lets a heavier target (e.g. self-hosting Chakravyuh with capable models) raise the hard/idle
+  // timeouts without changing the public default.
+  budget: z.object({
+    maxAttemptsPerUnit: z.number().int().min(1).optional(),
+    idleTimeoutMs: z.number().int().min(1000).optional(),
+    hardTimeoutMs: z.number().int().min(1000).optional(),
+    maxTokensPerUnit: z.number().int().min(1).optional(),
+  }).optional(),
   // Pi extensions (-e) to load on every spawn. Omit to use DEFAULT_EXTENSIONS (empty). [] disables.
   extensions: z.array(z.string()).optional(),
   // Directory for per-run Pi stdout logs (see piLogPath). Must live outside project.root (leak
@@ -43,6 +52,12 @@ export interface ChakravyuhConfig {
    */
   currentMdPath: string;
   piBinPath: string;
+  /**
+   * Optional per-project budget override. Merged over {@link DEFAULT_BUDGET} in the CLI, so any
+   * omitted field keeps its default. Use it to give a heavier target more time/attempts without
+   * touching the shared default.
+   */
+  budget?: Partial<LoopDeps["budget"]>;
   /**
    * Pi `-e` extensions loaded on every spawn. Omit to fall back to `DEFAULT_EXTENSIONS` (empty by
    * default); pass `[]` to load none. Configure provider auth per Pi's own docs.

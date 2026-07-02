@@ -137,7 +137,8 @@ async function main(): Promise<void> {
 
     const result = await runUnit(cfg.project, unit, {
       store, spawn: spawnPi, runHealth, addWorktree, removeWorktree, deleteBranch,
-      rootIsClean, commitAll, stopRequested, roles: cfg.roles, budget: DEFAULT_BUDGET,
+      rootIsClean, commitAll, stopRequested, roles: cfg.roles,
+      budget: { ...DEFAULT_BUDGET, ...cfg.budget },
       piBinPath: cfg.piBinPath, sandbox: cfg.project.sandbox, extensions, logDir,
     });
     console.log(`unit ${result.slug} -> ${result.status} (attempt ${result.attempt})`);
