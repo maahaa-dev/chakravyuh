@@ -26,6 +26,15 @@
  * `chakravyuh sync-status <featureDir> <config.json>` is a separate, explicit, human-run subcommand
  * (see {@link syncStatus}) — it rewrites each `<featureDir>/issues/*.md` file's `Status:` line from
  * the store's latest terminal run status and exits 0. It is never invoked from the drain loop.
+ *
+ * `chakravyuh reflect <config.json> [--last N]` is a third explicit, human-run, advisory subcommand
+ * (see the reflection-pass design doc): read-only over the store, it loads the `N` most-recently-
+ * updated units (default {@link DEFAULT_REFLECT_LAST}) plus every run, folds them into a scored
+ * trace digest via {@link buildReflectionInput}, and spawns exactly ONE read-only reflector role
+ * (tools `read,grep,find,ls`, `REFLECTOR_BRIEF`) via {@link runReflect} — no worktree, no health
+ * gate, no git, no commit. The reflector's final text is written verbatim to
+ * `<reflections>/<ISO-timestamp>.md` (same `reflections/` dir the `status` branch above counts),
+ * the only thing this subcommand writes. Exits 0 on success.
  */
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -44,6 +53,7 @@ import { scheduleStep } from "./schedule.js";
 import { acquireDrainLease, DrainLeaseHeldError, type DrainLease } from "./lease.js";
 import { renderStatus } from "./status.js";
 import { syncStatus } from "./sync-status.js";
+import { buildReflectionInput, runReflect, DEFAULT_REFLECT_LAST } from "./reflect.js";
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -63,6 +73,46 @@ async function main(): Promise<void> {
     store.close();
     for (const c of result.changes) console.log(`${c.slug}: ${c.from} -> ${c.to}`);
     for (const f of result.noStatusLine) console.log(`${f}: no Status: line, left untouched`);
+    process.exit(0);
+  }
+
+  // `reflect` is another explicit, human-run, outside-the-loop subcommand — advisory and read-only
+  // over the store (see the reflection-pass design doc). It never touches a worktree, the health
+  // gate, or git, and writes only under `<reflections>/<ISO-timestamp>.md`, derived next to
+  // backlogPath the same way the `status` branch below derives it.
+  if (args[0] === "reflect") {
+    const [, reflectConfigPath, ...reflectRest] = args;
+    if (!reflectConfigPath) {
+      console.error("usage: chakravyuh reflect <config.json> [--last N]");
+      process.exit(2);
+    }
+    const lastIdx = reflectRest.indexOf("--last");
+    const lastN = lastIdx >= 0 ? Number(reflectRest[lastIdx + 1]) : DEFAULT_REFLECT_LAST;
+    if (lastIdx >= 0 && (!reflectRest[lastIdx + 1] || Number.isNaN(lastN))) {
+      console.error("--last requires a numeric argument");
+      process.exit(2);
+    }
+
+    const reflectCfg = loadConfig(reflectConfigPath);
+    const reflectStore = new SqliteStore(reflectCfg.dbPath);
+    const units = reflectStore.allUnits().slice(0, lastN); // allUnits() is newest-first by updated_at
+    const runs = reflectStore.allRuns();
+    reflectStore.close();
+
+    const reflectLogDir = reflectCfg.logDir ?? join(dirname(reflectCfg.backlogPath), "logs");
+    const digest = buildReflectionInput(units, runs, reflectLogDir);
+    const reflectionsDir = join(dirname(reflectCfg.backlogPath), "reflections");
+
+    const path = await runReflect(spawnPi, digest, reflectionsDir, {
+      provider: reflectCfg.roles.reviewer.provider,
+      model: reflectCfg.roles.reviewer.model,
+      thinking: reflectCfg.roles.reviewer.thinking,
+      piBinPath: reflectCfg.piBinPath,
+      extensions: reflectCfg.extensions ?? DEFAULT_EXTENSIONS,
+      idleTimeoutMs: DEFAULT_BUDGET.idleTimeoutMs,
+      hardTimeoutMs: DEFAULT_BUDGET.hardTimeoutMs,
+    });
+    console.log(`reflection written to ${path}`);
     process.exit(0);
   }
 

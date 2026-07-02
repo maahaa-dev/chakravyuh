@@ -1,7 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { mkdtempSync, rmSync, readdirSync, readFileSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Run, WorkUnit } from "../src/domain.js";
+import type { PiSpawnOpts, PiSpawnResult } from "../src/pi.js";
 import { piLogPath } from "../src/pi-log.js";
-import { buildReflectionInput } from "../src/reflect.js";
+import { buildReflectionInput, runReflect } from "../src/reflect.js";
 
 function unit(overrides: Partial<WorkUnit> = {}): WorkUnit {
   return {
@@ -115,5 +119,78 @@ describe("buildReflectionInput", () => {
 
   it("returns an empty digest for no units", () => {
     expect(buildReflectionInput([], [], "/logs")).toEqual({ units: [] });
+  });
+});
+
+describe("runReflect", () => {
+  let outputDir: string;
+
+  afterEach(() => {
+    rmSync(outputDir, { recursive: true, force: true });
+  });
+
+  function fakeSpawn(text: string): (o: PiSpawnOpts) => Promise<PiSpawnResult> {
+    return async (): Promise<PiSpawnResult> =>
+      ({ sessionId: "s", stopReason: "stop", tokensIn: 1, tokensOut: 1, text, exitReason: "exit:0" });
+  }
+
+  const opts = {
+    provider: "anthropic", model: "haiku", thinking: "low",
+    idleTimeoutMs: 1000, hardTimeoutMs: 2000,
+  };
+
+  it("writes the reflector's final text to a markdown file under the reflections dir", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "reflect-"));
+    outputDir = join(parent, "reflections"); // does not exist yet — runReflect must create it
+    const digest = buildReflectionInput([], [], "/logs");
+
+    const path = await runReflect(fakeSpawn("## Findings\n\nNo issues found."), digest, outputDir, opts);
+
+    expect(existsSync(outputDir)).toBe(true);
+    expect(path.startsWith(outputDir)).toBe(true);
+    expect(path.endsWith(".md")).toBe(true);
+    expect(readFileSync(path, "utf8")).toBe("## Findings\n\nNo issues found.");
+    // the ISO-timestamp filename convention
+    const filename = path.slice(outputDir.length + 1);
+    expect(filename).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}-?\d{2}.*\.md$|^.+Z\.md$/);
+  });
+
+  it("writes exactly one file, the only artifact this command produces", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "reflect-"));
+    outputDir = join(parent, "reflections");
+    const digest = buildReflectionInput([], [], "/logs");
+
+    await runReflect(fakeSpawn("proposal body"), digest, outputDir, opts);
+
+    expect(readdirSync(outputDir)).toHaveLength(1);
+  });
+
+  it("spawns exactly once, with read-only tools and no worktree/cwd override", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "reflect-"));
+    outputDir = join(parent, "reflections");
+    const digest = buildReflectionInput([], [], "/logs");
+    const calls: PiSpawnOpts[] = [];
+    const spy = async (o: PiSpawnOpts): Promise<PiSpawnResult> => {
+      calls.push(o);
+      return { sessionId: "s", stopReason: "stop", tokensIn: 1, tokensOut: 1, text: "ok", exitReason: "exit:0" };
+    };
+
+    await runReflect(spy, digest, outputDir, opts);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].tools).toBe("read,grep,find,ls");
+    expect(calls[0].sandbox).toBeUndefined();
+  });
+
+  it("never creates a worktree directory or touches git", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "reflect-"));
+    outputDir = join(parent, "reflections");
+    const digest = buildReflectionInput([], [], "/logs");
+
+    await runReflect(fakeSpawn("proposal body"), digest, outputDir, opts);
+
+    // nothing beyond the reflections dir and its one file was created under parent
+    expect(readdirSync(parent)).toEqual(["reflections"]);
+    expect(existsSync(join(parent, ".git"))).toBe(false);
   });
 });

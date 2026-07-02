@@ -1,5 +1,9 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Role, Run, WorkUnit, WorkUnitStatus } from "./domain.js";
 import { piLogPath } from "./pi-log.js";
+import { REFLECTOR_BRIEF } from "./briefs.js";
+import type { PiSpawnOpts, PiSpawnResult } from "./pi.js";
 
 /**
  * One axis-labelled blocker pulled from a run's verdict, kept alongside the attempt it fired on
@@ -93,4 +97,51 @@ export function buildReflectionInput(units: WorkUnit[], runs: Run[], logDir: str
       };
     }),
   };
+}
+
+/**
+ * Default `--last N` window: how many most-recently-updated units {@link runReflect}'s caller should
+ * slice `store.allUnits()` down to before building the digest (units come back ordered newest-first
+ * by `updated_at`; see {@link SqliteStore.allUnits}). Small enough to keep the reflector's digest +
+ * raw-log reading bounded; tune from real use (see the design doc's open questions).
+ */
+export const DEFAULT_REFLECT_LAST = 20;
+
+/**
+ * Runs the one-shot, read-only reflection pass: spawns exactly ONE reflector role over the given
+ * digest via `spawn` (injected — see `runUnit`'s same seam in `loop.ts`), then writes its final text
+ * verbatim to `<outputDir>/<ISO-timestamp>.md`, creating `outputDir` if missing. That file is the
+ * only thing this function writes — no worktree, no health gate, no git, no commit; the reflector
+ * gets read-only tools only (`read,grep,find,ls`) and `cwd` is `process.cwd()` (there is no worktree
+ * to confine it to).
+ *
+ * Returns the path written, so a caller (e.g. the `reflect` CLI subcommand) can report it.
+ */
+export async function runReflect(
+  spawn: (o: PiSpawnOpts) => Promise<PiSpawnResult>,
+  digest: ReflectionInput,
+  outputDir: string,
+  opts: {
+    provider: string; model: string; thinking: string;
+    piBinPath?: string; extensions?: string[];
+    idleTimeoutMs: number; hardTimeoutMs: number;
+  },
+): Promise<string> {
+  const res = await spawn({
+    role: "reviewer", // no dedicated Role value for the reflector (Role stays maker/checker/reviewer);
+    // "reviewer" is the closest existing read-only role and only affects session-id shape, not behaviour.
+    cwd: process.cwd(),
+    provider: opts.provider, model: opts.model, thinking: opts.thinking,
+    tools: "read,grep,find,ls",
+    sessionId: `reflect-${Date.now()}`,
+    brief: REFLECTOR_BRIEF,
+    prompt: `Scored trace digest (JSON):\n${JSON.stringify(digest, null, 2)}`,
+    idleTimeoutMs: opts.idleTimeoutMs, hardTimeoutMs: opts.hardTimeoutMs,
+    binPath: opts.piBinPath, extensions: opts.extensions,
+  });
+
+  mkdirSync(outputDir, { recursive: true });
+  const path = join(outputDir, `${new Date().toISOString()}.md`);
+  writeFileSync(path, res.text);
+  return path;
 }
