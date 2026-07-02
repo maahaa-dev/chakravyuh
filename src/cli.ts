@@ -7,7 +7,9 @@
  * Usage: `chakravyuh <config.json> [--unit <slug>] [--list] [--all] [status]`. `--list` prints
  * `<slug>\t<title>` for every backlog unit and exits 0 without spawning Pi or running the loop.
  * `status` prints {@link renderStatus} over every stored unit/run and exits 0, read-only over the
- * store. `--all` drains every
+ * store — it also counts markdown files under `loops/<project>/reflections/` and passes that count
+ * in as `renderStatus`'s `pendingReflections` arg, so an accepted-but-unreviewed reflection
+ * proposal (design doc, decision 3) is visible without being modeled as a `WorkUnit`. `--all` drains every
  * non-terminal unit (see {@link unitsToDrain}) through the same single-unit path, ordered so a
  * unit runs after everything its spec's `Blocked by:`/`deps:` line names (see {@link drainOrder}),
  * but no longer strictly sequential: {@link scheduleStep} (`schedule.ts`) rolls units with no
@@ -25,7 +27,7 @@
  * (see {@link syncStatus}) — it rewrites each `<featureDir>/issues/*.md` file's `Status:` line from
  * the store's latest terminal run status and exits 0. It is never invoked from the drain loop.
  */
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { loadConfig } from "./config.js";
 import { parseBacklog } from "./store/backlog-md.js";
@@ -82,7 +84,14 @@ async function main(): Promise<void> {
 
   if (rest[0] === "status") {
     const store = new SqliteStore(cfg.dbPath);
-    console.log(renderStatus(store.allUnits(), store.allRuns()));
+    // Reflection proposals live in loops/<project>/reflections/ (sibling of backlog.md) and are
+    // deliberately never WorkUnits (design doc, decision 3) — renderStatus stays pure, so the CLI
+    // does the directory read and passes just the count in.
+    const reflectionsDir = join(dirname(cfg.backlogPath), "reflections");
+    const pendingReflections = existsSync(reflectionsDir)
+      ? readdirSync(reflectionsDir).filter((f) => f.endsWith(".md")).length
+      : 0;
+    console.log(renderStatus(store.allUnits(), store.allRuns(), pendingReflections));
     store.close();
     process.exit(0);
   }

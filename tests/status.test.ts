@@ -28,6 +28,7 @@ describe("renderStatus", () => {
         unit({ slug: "b", status: "approved", attempt: 2 }),
       ],
       [],
+      0,
     );
     expect(out).toContain("a: pending (a0)");
     expect(out).toContain("b: approved (a2)");
@@ -42,6 +43,7 @@ describe("renderStatus", () => {
         unit({ slug: "d", status: "failed" }),
       ],
       [],
+      0,
     );
     expect(out).toContain("2 pending, 1 approved, 1 failed");
   });
@@ -53,12 +55,23 @@ describe("renderStatus", () => {
         run({ workUnitId: "p:a", role: "maker", stopReason: "stop", startedAt: "2024-01-01T00:00:00Z" }),
         run({ workUnitId: "p:a", role: "checker", stopReason: "error", startedAt: "2024-01-02T00:00:00Z" }),
       ],
+      0,
     );
     expect(out).toContain("active: checker error");
   });
 
   it("renders no active line when there are no runs", () => {
-    const out = renderStatus([unit({ slug: "a" })], []);
+    const out = renderStatus([unit({ slug: "a" })], [], 0);
     expect(out).not.toContain("active:");
+  });
+
+  it("omits the reflections line when pendingReflections is 0", () => {
+    const out = renderStatus([unit({ slug: "a" })], [], 0);
+    expect(out).not.toContain("reflections:");
+  });
+
+  it("adds a reflections: N pending review line when pendingReflections > 0", () => {
+    const out = renderStatus([unit({ slug: "a" })], [], 3);
+    expect(out).toContain("reflections: 3 pending review");
   });
 });

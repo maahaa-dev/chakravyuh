@@ -37,6 +37,25 @@ describe("unitsToDrain", () => {
     ];
     expect(unitsToDrain(units).map((u) => u.slug)).toEqual(["b", "d"]);
   });
+
+  // Loop isolation (design doc, decision 3): a reflection proposal is a markdown file under
+  // loops/<proj>/reflections/, never a WorkUnit and never written into backlog.md, so it can
+  // never appear in the array unitsToDrain filters over in the first place. Trivially true
+  // today, but locked here as an explicit regression guard against a future change that starts
+  // parsing proposals into WorkUnits and accidentally lets them leak into --all.
+  it("never returns a reflection proposal — every drained unit is a real backlog WorkUnit", () => {
+    const units = [
+      unit({ slug: "a", status: "pending" }),
+      unit({ slug: "b", status: "blocked" }),
+    ];
+    const drained = unitsToDrain(units);
+    expect(drained).toHaveLength(2);
+    for (const u of drained) {
+      // A reflection proposal has no buildable spec (design doc: "a WorkUnit normally carries a
+      // buildable spec; a proposal has none") — every unit unitsToDrain returns has one.
+      expect(u.spec.trim().length).toBeGreaterThan(0);
+    }
+  });
 });
 
 describe("drainSummary", () => {
