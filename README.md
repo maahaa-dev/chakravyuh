@@ -321,15 +321,22 @@ Some of what the loop has built for itself:
 - Smaller conveniences: a read-only view of the backlog, a `status` command, automatic write-back of
   task outcomes to your tracker, and a readable summary file.
 
-It has even fixed a few of its own rough edges: a tricky internal refactor, and a round of hardening
-around how the test gate and the reviewer verdicts get parsed.
+It has even fixed a few of its own rough edges: a tricky internal refactor, a round of hardening
+around how the test gate and the reviewer verdicts get parsed, and — through its own loop — the
+reflection pass described below.
+
+- **An advisory reflection pass** (`chakravyuh reflect`): a read-only reviewer reads the scored trace
+  digest plus raw run logs and writes a critique of the loop's own behaviour to
+  `reflections/<ts>.md`. The proposals are files, never work units, so they can never re-enter the
+  loop unreviewed — a human triages them and hand-seeds any accepted change into the backlog.
 
 The workflow it's built for: a human breaks the work down and sharpens each task (I lean on Matt
 Pocock's planning skills for that), then Chakravyuh drains the ready queue. For the design principles
 behind the loop, see `CONSTITUTION.md`.
 
-**Not there yet:** a self-improving "reflection" pass, deploy automation, running several projects at
-once, and a Linux sandbox. Right now the sandbox is macOS only.
+**Not there yet:** *autonomous* self-improvement (the reflection pass proposes, a human still decides
+and seeds), deploy automation, running several projects at once, and a Linux sandbox. Right now the
+sandbox is macOS only.
 
 ### Running on a stable build (self-hosting)
 

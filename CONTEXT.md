@@ -85,6 +85,26 @@ terminal-and-passing, a slot free), *waiting* (a dep still pending/in-flight), *
 failed or was itself blocked — transitive). Do not add these to the persisted status enum.
 _Avoid_: level (there is no level concept — the scheduler is rolling, not barriered).
 
+### Reflection
+
+**Reflection pass**:
+An advisory, read-only critique of the loop's own past runs. A single reviewer-role Pi reads the
+**trace digest** plus raw run logs and writes a markdown **proposal** to `reflections/<ts>.md`. It
+never touches code and never enqueues work. Invoked by `chakravyuh reflect <config> [--last N]`.
+_Avoid_: optimizer, self-improvement (it proposes; a human decides).
+
+**Trace digest**:
+The pure, deterministic fold of stored run rows (role, model, tokens, verdict, stopReason, attempt)
+into a scored summary handed to the reflection pass. Built by `buildReflectionInput` — no I/O.
+_Avoid_: report, summary (overloaded).
+
+**Proposal**:
+A reflection's output: a markdown file of findings, human-triaged. A proposal is *not* a **work
+unit** and is filtered from the loop by construction (it is a file, never a backlog row), so an
+un-reviewed critique can never re-enter the loop. An accepted proposal is hand-seeded into the
+backlog as a normal unit.
+_Avoid_: reflection-unit, task.
+
 ## Notes
 
 - The store's synchronous single-thread driver serializes DB writes for free within one process; WAL
