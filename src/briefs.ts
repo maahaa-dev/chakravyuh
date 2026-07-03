@@ -3,7 +3,9 @@ import type { GateResult, Verdict, WorkUnit } from "./domain.js";
 const VERDICT_INSTRUCTION =
   'End your final message with a fenced json block exactly like:\n' +
   '```json\n{"pass": true, "summary": "one line", "blockers": []}\n```\n' +
-  'Set pass=false and list concrete blockers if the work is not acceptable.';
+  'Set pass=false and list concrete blockers if the work is not acceptable. Keep `summary` to one ' +
+  'genuinely short sentence (roughly under 150 characters) stating the verdict, not a ' +
+  'semicolon-chained recap of every item you checked.';
 
 /**
  * System prompt for the maker role: red-green-refactor TDD, small, worktree-confined, and explicitly
@@ -30,7 +32,10 @@ const REVIEWER_BINDING_RULES =
   "already enforces, and do not fail the review on a baseline smell alone unless it also breaks a " +
   "documented repo standard; (3) a cross-path consistency gap is NOT a baseline smell and is " +
   "therefore not subject to rule (2)'s judgement-call downgrade — treat it with the same weight as a " +
-  "repo-standards violation.";
+  "repo-standards violation: it is a hard blocker (pass:false) UNLESS the verdict states a specific, " +
+  "concrete reason the sibling path's invariant does not apply to the new path (e.g. the new path " +
+  "never performs the operation that invariant protects). A bare \"advisory only\" or \"not failing " +
+  "on this\" dismissal, without that stated reason, is insufficient and must NOT accompany pass:true.";
 
 /**
  * System prompt for the checker role: the Spec axis. Read-only inspection of the diff and tests
@@ -45,7 +50,9 @@ export const CHECKER_BRIEF =
   "elsewhere in the spec. Report, for each finding, a quote from the spec: (a) missing or partial " +
   "requirements, (b) scope creep — behaviour that was not asked for, (c) requirements implemented " +
   "wrongly, (d) a requirement that the code satisfies but that no test actually asserts. Do not " +
-  "attempt to edit. " + VERDICT_INSTRUCTION;
+  "attempt to edit. Do not itemize or restate every already-satisfied requirement in a checklist " +
+  "walkthrough; prefer a terse report naming only genuine findings (missing, wrong, or untested) — " +
+  "or none — over an exhaustive item-by-item recap of the whole spec. " + VERDICT_INSTRUCTION;
 
 /**
  * System prompt for the reviewer role: the Standards axis. An independent, read-only judgement of
