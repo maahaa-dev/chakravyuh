@@ -193,4 +193,107 @@ describe("runReflect", () => {
     expect(readdirSync(parent)).toEqual(["reflections"]);
     expect(existsSync(join(parent, ".git"))).toBe(false);
   });
+
+  it("tees the reflector's stdout to <logDir>/reflect-reviewer-a1.log when logDir is set", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "reflect-"));
+    outputDir = join(parent, "reflections");
+    const logDir = join(parent, "logs");
+    const digest = buildReflectionInput([], [], "/logs");
+
+    const teeingSpawn = async (o: PiSpawnOpts): Promise<PiSpawnResult> => {
+      o.tee?.("streamed chunk one\n");
+      o.tee?.("streamed chunk two\n");
+      return { sessionId: "s", stopReason: "stop", tokensIn: 1, tokensOut: 1, text: "proposal body", exitReason: "exit:0" };
+    };
+
+    await runReflect(teeingSpawn, digest, outputDir, { ...opts, logDir });
+
+    const logPath = piLogPath(logDir, "reflect", "reviewer", 1);
+    expect(existsSync(logPath)).toBe(true);
+    expect(readFileSync(logPath, "utf8")).toBe("streamed chunk one\nstreamed chunk two\n");
+  });
+
+  it("passes no tee when logDir is unset (unchanged behaviour)", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "reflect-"));
+    outputDir = join(parent, "reflections");
+    const digest = buildReflectionInput([], [], "/logs");
+    const calls: PiSpawnOpts[] = [];
+    const spy = async (o: PiSpawnOpts): Promise<PiSpawnResult> => {
+      calls.push(o);
+      return { sessionId: "s", stopReason: "stop", tokensIn: 1, tokensOut: 1, text: "ok", exitReason: "exit:0" };
+    };
+
+    await runReflect(spy, digest, outputDir, opts);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].tee).toBeUndefined();
+  });
+
+  it("re-spawns once with fallbackModel when the primary text is empty, and writes the fallback's text", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "reflect-"));
+    outputDir = join(parent, "reflections");
+    const digest = buildReflectionInput([], [], "/logs");
+    const calls: PiSpawnOpts[] = [];
+    const spy = async (o: PiSpawnOpts): Promise<PiSpawnResult> => {
+      calls.push(o);
+      if (calls.length === 1) return { sessionId: "s", stopReason: "stop", tokensIn: 1, tokensOut: 1, text: "", exitReason: "exit:0" };
+      return { sessionId: "s", stopReason: "stop", tokensIn: 1, tokensOut: 1, text: "fallback proposal", exitReason: "exit:0" };
+    };
+
+    const path = await runReflect(spy, digest, outputDir, { ...opts, fallbackModel: "fallback-model" });
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0].model).toBe(opts.model);
+    expect(calls[1].model).toBe("fallback-model");
+    expect(readFileSync(path, "utf8")).toBe("fallback proposal");
+  });
+
+  it("treats whitespace-only primary text as empty and triggers the fallback", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "reflect-"));
+    outputDir = join(parent, "reflections");
+    const digest = buildReflectionInput([], [], "/logs");
+    const calls: PiSpawnOpts[] = [];
+    const spy = async (o: PiSpawnOpts): Promise<PiSpawnResult> => {
+      calls.push(o);
+      if (calls.length === 1) return { sessionId: "s", stopReason: "stop", tokensIn: 1, tokensOut: 1, text: "   \n\t", exitReason: "exit:0" };
+      return { sessionId: "s", stopReason: "stop", tokensIn: 1, tokensOut: 1, text: "fallback proposal", exitReason: "exit:0" };
+    };
+
+    const path = await runReflect(spy, digest, outputDir, { ...opts, fallbackModel: "fallback-model" });
+
+    expect(calls).toHaveLength(2);
+    expect(readFileSync(path, "utf8")).toBe("fallback proposal");
+  });
+
+  it("does not spawn twice when fallbackModel is unset, and writes the (empty) primary result without throwing", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "reflect-"));
+    outputDir = join(parent, "reflections");
+    const digest = buildReflectionInput([], [], "/logs");
+    const calls: PiSpawnOpts[] = [];
+    const spy = async (o: PiSpawnOpts): Promise<PiSpawnResult> => {
+      calls.push(o);
+      return { sessionId: "s", stopReason: "stop", tokensIn: 1, tokensOut: 1, text: "", exitReason: "exit:0" };
+    };
+
+    const path = await runReflect(spy, digest, outputDir, opts);
+
+    expect(calls).toHaveLength(1);
+    expect(readFileSync(path, "utf8")).toBe("");
+  });
+
+  it("does not spawn twice when both attempts are empty (fallback set but still empty)", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "reflect-"));
+    outputDir = join(parent, "reflections");
+    const digest = buildReflectionInput([], [], "/logs");
+    const calls: PiSpawnOpts[] = [];
+    const spy = async (o: PiSpawnOpts): Promise<PiSpawnResult> => {
+      calls.push(o);
+      return { sessionId: "s", stopReason: "stop", tokensIn: 1, tokensOut: 1, text: "", exitReason: "exit:0" };
+    };
+
+    const path = await runReflect(spy, digest, outputDir, { ...opts, fallbackModel: "fallback-model" });
+
+    expect(calls).toHaveLength(2);
+    expect(readFileSync(path, "utf8")).toBe("");
+  });
 });

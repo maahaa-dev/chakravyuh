@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Role, Run, WorkUnit, WorkUnitStatus } from "./domain.js";
-import { piLogPath } from "./pi-log.js";
+import { piLogPath, createFileTee } from "./pi-log.js";
 import { REFLECTOR_BRIEF } from "./briefs.js";
 import type { PiSpawnOpts, PiSpawnResult } from "./pi.js";
 
@@ -115,6 +115,17 @@ export const DEFAULT_REFLECT_LAST = 20;
  * gets read-only tools only (`read,grep,find,ls`) and `cwd` is `process.cwd()` (there is no worktree
  * to confine it to).
  *
+ * When `opts.logDir` is set, the spawn's stdout is teed live to
+ * `<logDir>/reflect-reviewer-a1.log` via {@link createFileTee}, exactly like every other spawn in
+ * the loop — omit it to keep today's behaviour (no tee).
+ *
+ * Some provider configs occasionally return a 0-byte (or whitespace-only) final `text` on an
+ * otherwise successful run. When `opts.fallbackModel` is set and the primary spawn's `text` is
+ * empty, this re-spawns exactly once with `model: opts.fallbackModel` (same brief/prompt/tools/tee)
+ * and writes whichever result has non-empty text, preferring the primary. If `fallbackModel` is
+ * unset, or both attempts come back empty, the primary result is written as-is — this never throws
+ * on an empty proposal.
+ *
  * Returns the path written, so a caller (e.g. the `reflect` CLI subcommand) can report it.
  */
 export async function runReflect(
@@ -125,20 +136,31 @@ export async function runReflect(
     provider: string; model: string; thinking: string;
     piBinPath?: string; extensions?: string[];
     idleTimeoutMs: number; hardTimeoutMs: number;
+    logDir?: string; fallbackModel?: string;
   },
 ): Promise<string> {
-  const res = await spawn({
+  const tee = opts.logDir != null ? createFileTee(opts.logDir, "reflect", "reviewer", 1) : undefined;
+
+  const spawnOpts = (model: string): PiSpawnOpts => ({
     role: "reviewer", // no dedicated Role value for the reflector (Role stays maker/checker/reviewer);
     // "reviewer" is the closest existing read-only role and only affects session-id shape, not behaviour.
     cwd: process.cwd(),
-    provider: opts.provider, model: opts.model, thinking: opts.thinking,
+    provider: opts.provider, model, thinking: opts.thinking,
     tools: "read,grep,find,ls",
     sessionId: `reflect-${Date.now()}`,
     brief: REFLECTOR_BRIEF,
     prompt: `Scored trace digest (JSON):\n${JSON.stringify(digest, null, 2)}`,
     idleTimeoutMs: opts.idleTimeoutMs, hardTimeoutMs: opts.hardTimeoutMs,
     binPath: opts.piBinPath, extensions: opts.extensions,
+    tee,
   });
+
+  let res = await spawn(spawnOpts(opts.model));
+
+  if (res.text.trim().length === 0 && opts.fallbackModel != null) {
+    const fallbackRes = await spawn(spawnOpts(opts.fallbackModel));
+    if (fallbackRes.text.trim().length > 0) res = fallbackRes;
+  }
 
   mkdirSync(outputDir, { recursive: true });
   const path = join(outputDir, `${new Date().toISOString()}.md`);
