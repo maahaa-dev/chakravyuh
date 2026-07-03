@@ -325,12 +325,16 @@ It has even fixed a few of its own rough edges: a tricky internal refactor, a ro
 around how the test gate and the reviewer verdicts get parsed, and — through its own loop — the
 reflection pass described below.
 
-- **An advisory reflection pass** (`chakravyuh reflect`): a read-only reviewer reads the scored trace
-  digest plus raw run logs and writes a critique of the loop's own behaviour to
-  `reflections/<ts>.md`. The proposals are files, never work units, so they can never re-enter the
-  loop unreviewed — a human triages them and hand-seeds any accepted change into the backlog. Like
-  every other spawn it streams to `logDir` (watchable live), and an optional `reflectFallbackModel`
-  re-runs the pass once if the chosen model returns empty output.
+- **An advisory reflection pass** (`chakravyuh reflect`): the loop can point its reviewer at
+  *itself*. It reads back its own recent runs — what each role did, how many tokens it spent, where it
+  passed or failed — and writes up a plain-language critique of how it's been working, saved as a
+  markdown file under `reflections/`. The key safety rule: these critiques are only ever *suggestions*.
+  They're saved as ordinary files, never queued as work, so nothing the loop says about itself can
+  loop back and change the code on its own — a human reads the critique and decides whether to act on
+  it. It has already used this on its own review instructions twice: once to tighten how the two
+  reviewers judge a change, and again — reflecting on that very fix — to catch a gap the first pass had
+  left behind. (Operational details — where the run streams to, the fallback if a model returns
+  nothing — are in `CONTEXT.md`.)
 
 The workflow it's built for: a human breaks the work down and sharpens each task (I lean on Matt
 Pocock's planning skills for that), then Chakravyuh drains the ready queue. For the design principles
