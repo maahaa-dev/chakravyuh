@@ -90,7 +90,9 @@ _Avoid_: level (there is no level concept — the scheduler is rolling, not barr
 **Reflection pass**:
 An advisory, read-only critique of the loop's own past runs. A single reviewer-role Pi reads the
 **trace digest** plus raw run logs and writes a markdown **proposal** to `reflections/<ts>.md`. It
-never touches code and never enqueues work. Invoked by `chakravyuh reflect <config> [--last N]`.
+never touches code and never enqueues work. Invoked by `chakravyuh reflect <config> [--last N]`. Its
+spawn tees to `logDir` like the loop's, and an optional `reflectFallbackModel` config field re-runs
+it once when the chosen model returns empty output (no default model is baked in — absent ⇒ off).
 _Avoid_: optimizer, self-improvement (it proposes; a human decides).
 
 **Trace digest**:

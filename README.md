@@ -328,7 +328,9 @@ reflection pass described below.
 - **An advisory reflection pass** (`chakravyuh reflect`): a read-only reviewer reads the scored trace
   digest plus raw run logs and writes a critique of the loop's own behaviour to
   `reflections/<ts>.md`. The proposals are files, never work units, so they can never re-enter the
-  loop unreviewed — a human triages them and hand-seeds any accepted change into the backlog.
+  loop unreviewed — a human triages them and hand-seeds any accepted change into the backlog. Like
+  every other spawn it streams to `logDir` (watchable live), and an optional `reflectFallbackModel`
+  re-runs the pass once if the chosen model returns empty output.
 
 The workflow it's built for: a human breaks the work down and sharpens each task (I lean on Matt
 Pocock's planning skills for that), then Chakravyuh drains the ready queue. For the design principles
