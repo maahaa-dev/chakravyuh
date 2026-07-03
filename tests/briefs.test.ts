@@ -40,6 +40,19 @@ describe("briefs", () => {
     expect(CHECKER_BRIEF.toLowerCase()).toMatch(/does not waive a requirement/);
   });
 
+  it("checker brief discourages an exhaustive checklist recap of already-satisfied requirements", () => {
+    expect(CHECKER_BRIEF.toLowerCase()).toMatch(/do not itemize or restate every already-satisfied requirement/);
+    expect(CHECKER_BRIEF.toLowerCase()).toMatch(/terse report naming only genuine findings/);
+    expect(CHECKER_BRIEF.toLowerCase()).toMatch(/exhaustive item-by-item recap of the whole spec/);
+  });
+
+  it("verdict instruction bounds the summary to one short sentence, not a semicolon-chained recap", () => {
+    expect(CHECKER_BRIEF.toLowerCase()).toMatch(/genuinely short sentence \(roughly under 150 characters\)/);
+    expect(CHECKER_BRIEF.toLowerCase()).toMatch(/not a semicolon-chained recap of every item/);
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/genuinely short sentence \(roughly under 150 characters\)/);
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/not a semicolon-chained recap of every item/);
+  });
+
   it("reviewer brief names the Standards axis and contains the full Fowler smell baseline", () => {
     expect(REVIEWER_BRIEF).toMatch(/Standards axis/);
     const smells = [
@@ -64,6 +77,13 @@ describe("briefs", () => {
     expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/never hard blockers/);
     expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/is not a baseline smell/);
     expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/same weight as a repo-standards violation/);
+  });
+
+  it("reviewer brief rule (3) makes cross-path consistency a hard blocker unless justified, rejecting a bare advisory-only dismissal", () => {
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/hard blocker \(pass:false\) unless the verdict states a specific/);
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/sibling path's invariant does not apply to the new path/);
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/"advisory only"/);
+    expect(REVIEWER_BRIEF.toLowerCase()).toMatch(/insufficient and must not accompany pass:true/);
   });
 
   it("reviewer brief adds cross-path consistency to the Standards axis", () => {
