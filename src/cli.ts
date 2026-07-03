@@ -43,6 +43,7 @@ import { parseBacklog } from "./store/backlog-md.js";
 import { listUnitsText } from "./list.js";
 import { SqliteStore } from "./store/sqlite-store.js";
 import { spawnPi, DEFAULT_EXTENSIONS } from "./pi.js";
+import { firstMissingExtension } from "./extensions.js";
 import { runHealth } from "./gates.js";
 import { addWorktree, removeWorktree, deleteBranch, rootIsClean, commitAll, isPathInside } from "./git.js";
 import { runUnit } from "./loop.js";
@@ -103,12 +104,19 @@ async function main(): Promise<void> {
     const digest = buildReflectionInput(units, runs, reflectLogDir);
     const reflectionsDir = join(dirname(reflectCfg.backlogPath), "reflections");
 
+    // Fail loudly at startup if a configured Pi extension path is missing — same check and same
+    // message/exit code as the main drain path below, so a dropped path never surfaces later as an
+    // opaque per-spawn error.
+    const reflectExtensions = reflectCfg.extensions ?? DEFAULT_EXTENSIONS;
+    const missingReflectExt = firstMissingExtension(reflectExtensions);
+    if (missingReflectExt) { console.error(`extension not found: ${missingReflectExt}`); process.exit(2); }
+
     const path = await runReflect(spawnPi, digest, reflectionsDir, {
       provider: reflectCfg.roles.reviewer.provider,
       model: reflectCfg.roles.reviewer.model,
       thinking: reflectCfg.roles.reviewer.thinking,
       piBinPath: reflectCfg.piBinPath,
-      extensions: reflectCfg.extensions ?? DEFAULT_EXTENSIONS,
+      extensions: reflectExtensions,
       idleTimeoutMs: DEFAULT_BUDGET.idleTimeoutMs,
       hardTimeoutMs: DEFAULT_BUDGET.hardTimeoutMs,
     });
@@ -155,9 +163,8 @@ async function main(): Promise<void> {
   // Fail loudly at startup if a configured Pi extension path is missing, so a dropped path surfaces
   // here rather than later as a per-request spawn error.
   const extensions = cfg.extensions ?? DEFAULT_EXTENSIONS;
-  for (const ext of extensions) {
-    if (!existsSync(ext)) { console.error(`extension not found: ${ext}`); process.exit(2); }
-  }
+  const missingExt = firstMissingExtension(extensions);
+  if (missingExt) { console.error(`extension not found: ${missingExt}`); process.exit(2); }
 
   const backlog = parseBacklog(readFileSync(cfg.backlogPath, "utf8"), cfg.project.id);
 
