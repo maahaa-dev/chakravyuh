@@ -111,6 +111,8 @@ async function main(): Promise<void> {
       extensions: reflectCfg.extensions ?? DEFAULT_EXTENSIONS,
       idleTimeoutMs: DEFAULT_BUDGET.idleTimeoutMs,
       hardTimeoutMs: DEFAULT_BUDGET.hardTimeoutMs,
+      logDir: reflectLogDir,
+      fallbackModel: reflectCfg.reflectFallbackModel,
     });
     console.log(`reflection written to ${path}`);
     process.exit(0);

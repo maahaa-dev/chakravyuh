@@ -29,6 +29,10 @@ const ConfigSchema = z.object({
   // Directory for per-run Pi stdout logs (see piLogPath). Must live outside project.root (leak
   // guard) — e.g. loops/<proj>/logs/. Omit to skip logging.
   logDir: z.string().optional(),
+  // Optional fallback model for the `reflect` subcommand only (see runReflect in reflect.ts): used
+  // for exactly one re-spawn if the primary reflector run returns empty/whitespace-only text. Omit
+  // to disable the fallback — no default model is baked into the code.
+  reflectFallbackModel: z.string().optional(),
 });
 
 /**
@@ -68,6 +72,12 @@ export interface ChakravyuhConfig {
    * `loops/<proj>/logs/`. Omit to skip logging.
    */
   logDir?: string;
+  /**
+   * Optional fallback model for the `reflect` subcommand only (see {@link runReflect}): used for
+   * exactly one re-spawn if the primary reflector run returns empty/whitespace-only text. Omit to
+   * disable the fallback — no default model is baked into the code.
+   */
+  reflectFallbackModel?: string;
 }
 
 /**
